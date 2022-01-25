@@ -51,13 +51,13 @@ def get_all_pics():
             for i in range(len(data[0])):
                 res = requests.get(data[0][i])
                 if data[1][i].startswith('unknown'):
-                    with open('C:/Users/bdvys/Desktop/discord parser/images/screenshots/' + 'unknown_' + str(next(for_unknown)) + '.png', 'wb') as file:
+                    with open(ScreenShot_path + 'unknown_' + str(next(for_unknown)) + '.png', 'wb') as file:
                         file.write(res.content)
                         os.utime(file.name, 
                                 (datetime.timestamp(datetime.strptime(data[2][i], '%Y-%m-%dT%H:%M:%S.%f%z')), 
                                  datetime.timestamp(datetime.strptime(data[2][i], '%Y-%m-%dT%H:%M:%S.%f%z'))))
                 else:
-                    with open('C:/Users/bdvys/Desktop/discord parser/images/' + data[1][i], 'wb') as file:
+                    with open(Images_path + data[1][i], 'wb') as file:
                         file.write(res.content)
                         os.utime(file.name, 
                                 (datetime.timestamp(datetime.strptime(data[2][i], '%Y-%m-%dT%H:%M:%S.%f%z')), 
