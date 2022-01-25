@@ -2,6 +2,8 @@ import requests
 import json
 from requests.structures import CaseInsensitiveDict 
 from config import *
+import os
+from datetime import datetime
 
 headers = CaseInsensitiveDict()
 headers['Authorization'] = Authorization
@@ -51,20 +53,26 @@ def get_all_pics():
                 if data[1][i].startswith('unknown'):
                     with open('C:/Users/bdvys/Desktop/discord parser/images/screenshots/' + 'unknown_' + str(next(for_unknown)) + '.png', 'wb') as file:
                         file.write(res.content)
+                        os.utime(file.name, 
+                                (datetime.timestamp(datetime.strptime(data[2][i], '%Y-%m-%dT%H:%M:%S.%f%z')), 
+                                 datetime.timestamp(datetime.strptime(data[2][i], '%Y-%m-%dT%H:%M:%S.%f%z'))))
                 else:
                     with open('C:/Users/bdvys/Desktop/discord parser/images/' + data[1][i], 'wb') as file:
                         file.write(res.content)
+                        os.utime(file.name, 
+                                (datetime.timestamp(datetime.strptime(data[2][i], '%Y-%m-%dT%H:%M:%S.%f%z')), 
+                                 datetime.timestamp(datetime.strptime(data[2][i], '%Y-%m-%dT%H:%M:%S.%f%z'))))
                 print('Загружено - ' + data[1][i])
         except Exception as ex:
             print(ex)
   
-    url = 'https://discord.com/api/v9/guilds/' + Server+ ' /messages/search?has=image'
+    url = 'https://discord.com/api/v9/guilds/' + Server + ' /messages/search?has=image'
     res = requests.get(url, headers=headers)
     js = json.loads(res.text)
     total_num = js['total_results']
     for i in range(0, total_num, 50):
         download_imgs(get_img_data(js))
-        url = 'https://discord.com/api/v9/guilds/' + Server+ ' /messages/search?has=image&offset=' + str(i)
+        url = 'https://discord.com/api/v9/guilds/' + Server + ' /messages/search?has=image&offset=' + str(i)
         res = requests.get(url, headers=headers)
         js = json.loads(res.text)
 
