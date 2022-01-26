@@ -9,21 +9,27 @@ headers = CaseInsensitiveDict()
 headers['Authorization'] = Authorization
 
 
+def make_folders(path: str):
+    if not os.path.exists(path + 'Images/screenshots/'):
+        os.makedirs(path + 'Images/screenshots/')
+    return path + 'Images/', path + 'Images/screenshots/'
 
-def write_history(js):
-    try:
-        for message in js:
-            with open('history.txt', 'a', encoding='utf-8') as file:
-                file.write('\n')
-                if message['content'] != '':
-                    file.write(message['timestamp'][:-13].replace('T', ' ') + '-' + message['author']['username'] + ': ' + message['content'])
-                else:
-                    file.write(message['timestamp'][:-13].replace('T', ' ') + '-' + message['author']['username'] + ': ' + message['attachments'][0]['url'])
-    except Exception as ex:
-        print(ex)
+img_path, screenshot_path = make_folders(path)
 
 
 def get_all_message():
+    def write_history(js):
+        try:
+            for message in js:
+                with open('history.txt', 'a', encoding='utf-8') as file:
+                    file.write('\n')
+                    if message['content'] != '':
+                        file.write(message['timestamp'][:-13].replace('T', ' ') + '-' + message['author']['username'] + ': ' + message['content'])
+                    else:
+                        file.write(message['timestamp'][:-13].replace('T', ' ') + '-' + message['author']['username'] + ': ' + message['attachments'][0]['url'])
+        except Exception as ex:
+            print(ex)
+
     url = 'https://discord.com/api/v9/channels/' + Chanel + ' /messages?limit=100'
     while True:
         res = requests.get(url, headers=headers)
@@ -40,41 +46,55 @@ def get_all_pics():
         titles = []
         timestamps = []
         for i in js['messages']:
-            links.append(i[0]['attachments'][0]['url'])
-            titles.append(i[0]['attachments'][0]['filename'])
-            timestamps.append(i[0]['timestamp'])
+            try:
+                links.append(i[0]['attachments'][0]['url'])
+                titles.append(i[0]['attachments'][0]['filename'])
+                timestamps.append(i[0]['timestamp'])
+            except Exception as ex:
+                    print('Ошибка при добавлениии файла', ex)    
         return links, titles, timestamps
 
     def download_imgs(data: tuple):
         try:
             assert(len(data[0]) == len(data[1]) == len(data[2]), 'Не соответствие данных(ссылка, имя, дата создание)')  
             for i in range(len(data[0])):
-                res = requests.get(data[0][i])
-                if data[1][i].startswith('unknown'):
-                    with open(ScreenShot_path + 'unknown_' + str(next(for_unknown)) + '.png', 'wb') as file:
-                        file.write(res.content)
-                        os.utime(file.name, 
-                                (datetime.timestamp(datetime.strptime(data[2][i], '%Y-%m-%dT%H:%M:%S.%f%z')), 
-                                 datetime.timestamp(datetime.strptime(data[2][i], '%Y-%m-%dT%H:%M:%S.%f%z'))))
-                else:
-                    with open(Images_path + data[1][i], 'wb') as file:
-                        file.write(res.content)
-                        os.utime(file.name, 
-                                (datetime.timestamp(datetime.strptime(data[2][i], '%Y-%m-%dT%H:%M:%S.%f%z')), 
-                                 datetime.timestamp(datetime.strptime(data[2][i], '%Y-%m-%dT%H:%M:%S.%f%z'))))
+                try:
+                    res = requests.get(data[0][i])
+                except Exception as ex:
+                    print('Ошибка при скачивании картинки', ex)
+                try:
+                    if data[1][i].startswith('unknown'):
+                        with open(screenshot_path + 'unknown_' + str(next(for_unknown)) + '.png', 'wb') as file:
+                            file.write(res.content)
+                            os.utime(file.name, 
+                                    (datetime.timestamp(datetime.strptime(data[2][i], '%Y-%m-%dT%H:%M:%S.%f%z')), 
+                                    datetime.timestamp(datetime.strptime(data[2][i], '%Y-%m-%dT%H:%M:%S.%f%z'))))
+                    else:
+                        with open(img_path + data[1][i], 'wb') as file:
+                            file.write(res.content)
+                            os.utime(file.name, 
+                                    (datetime.timestamp(datetime.strptime(data[2][i], '%Y-%m-%dT%H:%M:%S.%f%z')), 
+                                    datetime.timestamp(datetime.strptime(data[2][i], '%Y-%m-%dT%H:%M:%S.%f%z'))))
+                except Exception as ex:
+                    print('Ошибка при сохранении файла', ex)
                 print('Загружено - ' + data[1][i])
         except Exception as ex:
             print(ex)
-  
+
     url = 'https://discord.com/api/v9/guilds/' + Server + ' /messages/search?has=image'
     res = requests.get(url, headers=headers)
     js = json.loads(res.text)
     total_num = js['total_results']
     for i in range(0, total_num, 50):
         download_imgs(get_img_data(js))
-        url = 'https://discord.com/api/v9/guilds/' + Server + ' /messages/search?has=image&offset=' + str(i)
-        res = requests.get(url, headers=headers)
-        js = json.loads(res.text)
+        try:
+            url = 'https://discord.com/api/v9/guilds/' + Server + ' /messages/search?has=image&offset=' + str(i)
+            res = requests.get(url, headers=headers)
+            js = json.loads(res.text)
+        except Exception as ex:
+            print('Ошибка при получении данных', ex)
+            print(i)
+            js = {'messages': [0]}
 
 get_all_pics()
 
