@@ -51,7 +51,9 @@ def get_all_pics():
                 titles.append(i[0]['attachments'][0]['filename'])
                 timestamps.append(i[0]['timestamp'])
             except Exception as ex:
-                    print('Ошибка при добавлениии файла', ex)    
+                    print('Ошибка при добавлениии файла', ex, )    
+                    with open('errors.txt', 'a') as file:
+                        file.write('\nОшибка при добавлениии файла - ' + url)
         return links, titles, timestamps
 
     def download_imgs(data: tuple):
@@ -85,7 +87,7 @@ def get_all_pics():
     res = requests.get(url, headers=headers)
     js = json.loads(res.text)
     total_num = js['total_results']
-    for i in range(0, total_num, 50):
+    for i in range(0, total_num, 25):
         download_imgs(get_img_data(js))
         try:
             url = 'https://discord.com/api/v9/guilds/' + Server + ' /messages/search?has=image&offset=' + str(i)
@@ -93,8 +95,15 @@ def get_all_pics():
             js = json.loads(res.text)
         except Exception as ex:
             print('Ошибка при получении данных', ex)
-            print(i)
-            js = {'messages': [0]}
+            print('Вторая попытка')
+            try:
+                res = requests.get(url, headers=headers, timeout=10)
+                js = json.loads(res.text)
+                print('Успех!')
+            except Exception as ex:
+                print('Ошибка, номер i - ' + str(i), ex)
+                with open('errors.txt', 'a') as file:
+                    file.write('\nНе удалось загрузить json' + url)
 
 get_all_pics()
 
