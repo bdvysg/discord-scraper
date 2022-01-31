@@ -51,42 +51,47 @@ def get_all_pics():
                 titles.append(i[0]['attachments'][0]['filename'])
                 timestamps.append(i[0]['timestamp'])
             except Exception as ex:
-                    print('Ошибка при добавлениии файла', ex, )    
+                    print('Ошибка при получении ссылки/имени/даты - ' + str(ex.__class__.__name__) + '(' + str(ex) + ')')    
                     with open('errors.txt', 'a') as file:
-                        file.write('\nОшибка при добавлениии файла - ' + url)
+                        file.write('\nОшибка при получении ссылки/имени/даты - ' + str(ex.__class__.__name__) + '(' + str(ex) + ')' + ' json: ' + json.dumps(js))
         return links, titles, timestamps
 
     def download_imgs(data: tuple):
-        try:
-            assert(len(data[0]) == len(data[1]) == len(data[2]), 'Не соответствие данных(ссылка, имя, дата создание)')  
-            for i in range(len(data[0])):
-                try:
-                    res = requests.get(data[0][i])
-                except Exception as ex:
-                    print('Ошибка при скачивании картинки', ex)
-                try:
-                    if data[1][i].startswith('unknown'):
-                        with open(screenshot_path + 'unknown_' + str(next(for_unknown)) + '.png', 'wb') as file:
-                            file.write(res.content)
-                            os.utime(file.name, 
-                                    (datetime.timestamp(datetime.strptime(data[2][i], '%Y-%m-%dT%H:%M:%S.%f%z')), 
-                                    datetime.timestamp(datetime.strptime(data[2][i], '%Y-%m-%dT%H:%M:%S.%f%z'))))
-                    else:
-                        with open(img_path + data[1][i], 'wb') as file:
-                            file.write(res.content)
-                            os.utime(file.name, 
-                                    (datetime.timestamp(datetime.strptime(data[2][i], '%Y-%m-%dT%H:%M:%S.%f%z')), 
-                                    datetime.timestamp(datetime.strptime(data[2][i], '%Y-%m-%dT%H:%M:%S.%f%z'))))
-                except Exception as ex:
-                    print('Ошибка при сохранении файла', ex)
-                print('Загружено - ' + data[1][i])
-        except Exception as ex:
-            print(ex)
+        for i in range(len(data[0])):
+            try:
+                res = requests.get(data[0][i])
+            except Exception as ex:
+                print('Ошибка при скачивании картинки - ' + str(ex.__class__.__name__) + '(' + str(ex) + ')')
+                with open('errors.txt', 'a') as file:
+                    file.write('\nОшибка при скачивании картинки - ' + str(ex.__class__.__name__) + '(' + str(ex) + ')' + ' url: ' + data[0][i])
+            try:
+                if data[1][i].startswith('unknown'):
+                    with open(screenshot_path + 'unknown_' + str(next(for_unknown)) + '.png', 'wb') as file:
+                        file.write(res.content)
+                        os.utime(file.name, 
+                                (datetime.timestamp(datetime.strptime(data[2][i], '%Y-%m-%dT%H:%M:%S.%f%z')), 
+                                datetime.timestamp(datetime.strptime(data[2][i], '%Y-%m-%dT%H:%M:%S.%f%z'))))
+                else:
+                    with open(img_path + data[1][i], 'wb') as file:
+                        file.write(res.content)
+                        os.utime(file.name, 
+                                (datetime.timestamp(datetime.strptime(data[2][i], '%Y-%m-%dT%H:%M:%S.%f%z')), 
+                                datetime.timestamp(datetime.strptime(data[2][i], '%Y-%m-%dT%H:%M:%S.%f%z'))))
+                print('Загружено ' + str(next(total_count)) + ' - ' + data[1][i])
+            except Exception as ex:
+                print('Ошибка при сохранении файла - ' + str(ex.__class__.__name__) + '(' + str(ex) + ')')
+                with open('errors.txt', 'a') as file:
+                    file.write('\nОшибка при сохранении файла - ' + str(ex.__class__.__name__) + '(' + str(ex) + '):'
+                              '\n   ' + data[0][i] + 
+                              '\n   ' + data[1][i] + 
+                              '\n   ' + data[2][i] 
+                              )
 
     url = 'https://discord.com/api/v9/guilds/' + Server + ' /messages/search?has=image'
     res = requests.get(url, headers=headers)
     js = json.loads(res.text)
     total_num = js['total_results']
+    total_count = (i for i in range(1, total_num))
     for i in range(0, total_num, 25):
         download_imgs(get_img_data(js))
         try:
@@ -94,17 +99,12 @@ def get_all_pics():
             res = requests.get(url, headers=headers)
             js = json.loads(res.text)
         except Exception as ex:
-            print('Ошибка при получении данных', ex)
-            print('Вторая попытка')
-            try:
-                res = requests.get(url, headers=headers, timeout=10)
-                js = json.loads(res.text)
-                print('Успех!')
-            except Exception as ex:
-                print('Ошибка, номер i - ' + str(i), ex)
-                with open('errors.txt', 'a') as file:
-                    file.write('\nНе удалось загрузить json' + url)
+            print('Ошибка при получении данных - ' + str(i) + ' ' + str(ex.__class__.__name__) + '(' + str(ex) + ')')
+            with open('errors.txt', 'a') as file:
+                file.write('\nОшибка при получении данных - ' + str(i) + ' ' + str(ex.__class__.__name__) + '(' + str(ex) + ')' + ' json: ' + json.dumps(js))
 
 get_all_pics()
+
+
 
 
