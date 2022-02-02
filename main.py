@@ -4,6 +4,8 @@ from requests.structures import CaseInsensitiveDict
 from config import *
 import os
 from datetime import datetime
+import asyncio
+
 
 headers = CaseInsensitiveDict()
 headers['Authorization'] = Authorization
@@ -52,7 +54,7 @@ def get_all_pics():
                 timestamps.append(i[0]['timestamp'])
             except Exception as ex:
                     print('Ошибка при получении ссылки/имени/даты - ' + str(ex.__class__.__name__) + '(' + str(ex) + ')')    
-                    with open('errors.txt', 'a') as file:
+                    with open('errors.txt', 'a', encoding='utf-8') as file:
                         file.write('\nОшибка при получении ссылки/имени/даты - ' + str(ex.__class__.__name__) + '(' + str(ex) + ')' + ' json: ' + json.dumps(js))
         return links, titles, timestamps
 
@@ -62,7 +64,7 @@ def get_all_pics():
                 res = requests.get(data[0][i])
             except Exception as ex:
                 print('Ошибка при скачивании картинки - ' + str(ex.__class__.__name__) + '(' + str(ex) + ')')
-                with open('errors.txt', 'a') as file:
+                with open('errors.txt', 'a', encoding='utf-8') as file:
                     file.write('\nОшибка при скачивании картинки - ' + str(ex.__class__.__name__) + '(' + str(ex) + ')' + ' url: ' + data[0][i])
             try:
                 if data[1][i].startswith('unknown'):
@@ -77,31 +79,52 @@ def get_all_pics():
                         os.utime(file.name, 
                                 (datetime.timestamp(datetime.strptime(data[2][i], '%Y-%m-%dT%H:%M:%S.%f%z')), 
                                 datetime.timestamp(datetime.strptime(data[2][i], '%Y-%m-%dT%H:%M:%S.%f%z'))))
-                print('Загружено ' + str(next(total_count)) + ' - ' + data[1][i])
+                print('Загружено ' + str(next(total_count)) + ' - ' + data[1][i] + ' (' + thread.name + ')' + '(' + str(threading.active_count()) + ')')
             except Exception as ex:
                 print('Ошибка при сохранении файла - ' + str(ex.__class__.__name__) + '(' + str(ex) + ')')
-                with open('errors.txt', 'a') as file:
+                with open('errors.txt', 'a', encoding='utf-8') as file:
                     file.write('\nОшибка при сохранении файла - ' + str(ex.__class__.__name__) + '(' + str(ex) + '):'
                               '\n   ' + data[0][i] + 
                               '\n   ' + data[1][i] + 
                               '\n   ' + data[2][i] 
                               )
 
+    def main(start: int, end: int):
+        for i in range(start, end, 25):
+            try:
+                if i == 0:
+                    url = 'https://discord.com/api/v9/guilds/' + Server + ' /messages/search?has=image'
+                else:
+                    url = 'https://discord.com/api/v9/guilds/' + Server + ' /messages/search?has=image&offset=' + str(i) 
+                res = requests.get(url, headers=headers)
+                js = json.loads(res.text)
+                len(js['messages'])
+                download_imgs(get_img_data(js))
+            except Exception as ex:
+                print('Ошибка при получении данных - ' + str(i) + ' ' + str(ex.__class__.__name__) + '(' + str(ex) + ')')
+                with open('errors.txt', 'a', encoding='utf-8') as file:
+                    file.write('\nОшибка при получении данных - ' + str(i) + ' ' + str(ex.__class__.__name__) + '(' + str(ex) + ')' + ' json: ' + json.dumps(js))
+            
+
     url = 'https://discord.com/api/v9/guilds/' + Server + ' /messages/search?has=image'
     res = requests.get(url, headers=headers)
     js = json.loads(res.text)
     total_num = js['total_results']
+    print('Найдено - ' + str(total_num) + ' изображений')
     total_count = (i for i in range(1, total_num))
-    for i in range(0, total_num, 25):
-        download_imgs(get_img_data(js))
-        try:
-            url = 'https://discord.com/api/v9/guilds/' + Server + ' /messages/search?has=image&offset=' + str(i)
-            res = requests.get(url, headers=headers)
-            js = json.loads(res.text)
-        except Exception as ex:
-            print('Ошибка при получении данных - ' + str(i) + ' ' + str(ex.__class__.__name__) + '(' + str(ex) + ')')
-            with open('errors.txt', 'a') as file:
-                file.write('\nОшибка при получении данных - ' + str(i) + ' ' + str(ex.__class__.__name__) + '(' + str(ex) + ')' + ' json: ' + json.dumps(js))
+    for i in range(5):
+        thread = threading.Thread(target=main, args=((total_num // 5) * i, (total_num // 5) * i + (total_num // 5),))
+        thread.start()
+        time.sleep(2)
+        
+
+    if total_num % 5 != 0:
+        thread = threading.Thread(target=main, args=((total_num // 5) * 4 + (total_num // 5), (total_num // 5) * 4 + (total_num // 5) + (total_num % 5),))
+        thread.start()
+
+    
+    
+    
 
 get_all_pics()
 
